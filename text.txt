@@ -1,32 +1,23 @@
-🔴 1. Erreur : no such service: build
-❌ Le problème :
-J’avais lancé cette commande :
+🚀 Déploiement Laravel via Docker – Mes erreurs et solutions
 
-bash
-Copier
-Modifier
-docker-compose up -d build
-Mais Docker a compris que build était un nom de service, ce qui n’était pas du tout le cas.
+J’ai voulu déployer une application Laravel avec Docker en utilisant la configuration suivante :
 
-✅ La solution :
-Il fallait en réalité écrire :
+Un conteneur pour Apache + PHP,
 
-bash
-Copier
-Modifier
-docker-compose up --build -d
-La différence ? Le --build est une option de la commande, pas un service.
+Un autre conteneur pour MySQL,
 
-🔴 2. Erreur 403 Forbidden – Apache
-❌ Le problème :
+Mon projet Laravel monté depuis mon dossier local.
+
+L’application fonctionnait parfaitement en local avec XAMPP, mais une fois passée dans Docker, plusieurs erreurs sont apparues. Voici un retour d’expérience avec les problèmes que j’ai rencontrés et les solutions que j’ai appliquées.
+
+
+ 2. Erreur 403 Forbidden – Apache
+ Le problème :
 Apache me renvoyait l’erreur :
 
-vbnet
-Copier
-Modifier
-Forbidden
-You don't have permission to access this resource.
-💡 Ce que j’ai vérifié :
+Forbidden You don't have permission to access this resource.
+
+ Ce que j’ai vérifié :
 Le dossier racine n'était pas bon (Apache servait /var/www/html au lieu de /var/www/html/public)
 
 Les permissions Linux sur mes fichiers étaient insuffisantes
@@ -35,58 +26,58 @@ Le module mod_rewrite n'était pas activé
 
 .htaccess n'était pas pris en compte
 
-✅ Les solutions appliquées :
+ Les solutions appliquées :
 J’ai changé le DocumentRoot dans Apache vers /var/www/html/public
 
 J’ai ajouté un bloc <Directory> dans la config Apache :
 
-apache
-Copier
-Modifier
 <Directory /var/www/html/public>
     AllowOverride All
 </Directory>
+
 J’ai activé mod_rewrite avec :
 
-bash
-Copier
-Modifier
 a2enmod rewrite
+
 Et j’ai donné les bons droits à Laravel :
 
-bash
-Copier
-Modifier
 chmod -R 775 storage bootstrap/cache
-🔴 3. Le projet Laravel n’apparaissait pas dans le conteneur
-❌ Le problème :
+
+ 3. Le projet Laravel n’apparaissait pas dans le conteneur
+ Le problème :
 Mon conteneur tournait bien, mais le projet Laravel n’était pas là, ou vide. Le volume n’était pas monté correctement.
 
-✅ Ce que j’ai fait :
+Ce que j’ai fait :
 J’ai vérifié que le montage était bien fait dans mon docker-compose.yml :
 
-yaml
-Copier
-Modifier
 volumes:
   - .:/var/www/html
-Et je me suis assuré que le dossier courant (.) contenait bien tout Laravel : artisan, app/, routes/, public/, etc.
 
-🔴 4. Avertissement Apache : ServerName
-❌ Le message :
-vbnet
-Copier
-Modifier
+Et je me suis assuré que le dossier courant (.) contenait bien tout Laravel : artisan, app/, routes/, public/, etc. 
+grace a :
+docker compose exec laravel-app bash puis
+ls -la /var/www/html et normalement nous devons avoir cette ligne (artisan
+composer.json
+routes/
+public/
+...
+)
+
+
+
+ 4. Avertissement Apache : ServerName
+ Le message :
+
 AH00558: Could not reliably determine the server's fully qualified domain name
-✅ Solution :
+ Solution :
 J’ai simplement ajouté dans mon Dockerfile :
 
-dockerfile
-Copier
-Modifier
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-🔧 Configuration mise en place
-📦 Dockerfile (PHP 8.3 + Apache) :
+
+
+
+4.Configuration mise en place
+a.Dockerfile (PHP 8.3 + Apache) :
 pdo_mysql installé
 
 mod_rewrite activé
@@ -97,7 +88,8 @@ ServerName défini
 
 composer installé depuis l’image officielle PHP
 
-🐳 docker-compose.yml :
+b.docker-compose.yml :
+
 2 services : laravel-app (Apache/PHP) + mysql
 
 Volume monté : Laravel local → /var/www/html
@@ -106,7 +98,7 @@ Port mappé : 8080:80
 
 Réseau privé : laravel
 
-✅ Résultat final
+ Résultat final
 Je peux accéder à mon application Laravel sur : http://localhost:8080
 
 J’exécute les commandes Artisan directement dans le conteneur
