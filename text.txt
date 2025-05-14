@@ -1,110 +1,114 @@
-
-Apache + PHP (dans un conteneur)
-
-MySQL (dans un autre)
-
-Laravel monté depuis ton dossier local
-
-Mais ton application fonctionnait en local (XAMPP par ex.) et pas dans Docker.
-
 🔴 1. Erreur : no such service: build
-❌ Problème
-Tu avais tapé :
+❌ Le problème :
+J’avais lancé cette commande :
 
 bash
-Copier le code
+Copier
+Modifier
 docker-compose up -d build
-Docker a cru que build était un service.
+Mais Docker a compris que build était un nom de service, ce qui n’était pas du tout le cas.
 
-✅ Solution
-Utiliser la bonne syntaxe :
+✅ La solution :
+Il fallait en réalité écrire :
 
 bash
-Copier le code
+Copier
+Modifier
 docker-compose up --build -d
-🔴 2. Erreur 403 Forbidden – Apache
-❌ Problème
-Apache lançait :
+La différence ? Le --build est une option de la commande, pas un service.
 
-text
-Copier le code
+🔴 2. Erreur 403 Forbidden – Apache
+❌ Le problème :
+Apache me renvoyait l’erreur :
+
+vbnet
+Copier
+Modifier
 Forbidden
 You don't have permission to access this resource.
-💡 Causes possibles :
-Mauvais dossier racine (Apache servait /var/www/html au lieu de /public)
+💡 Ce que j’ai vérifié :
+Le dossier racine n'était pas bon (Apache servait /var/www/html au lieu de /var/www/html/public)
 
-Droits Linux incorrects sur les fichiers
+Les permissions Linux sur mes fichiers étaient insuffisantes
 
-mod_rewrite pas activé
+Le module mod_rewrite n'était pas activé
 
-.htaccess ignoré
+.htaccess n'était pas pris en compte
 
-✅ Solutions :
-Modifier DocumentRoot → /var/www/html/public
+✅ Les solutions appliquées :
+J’ai changé le DocumentRoot dans Apache vers /var/www/html/public
 
-Ajouter un bloc <Directory> dans Apache avec AllowOverride All
+J’ai ajouté un bloc <Directory> dans la config Apache :
 
-Activer mod_rewrite
-
-Donner les bons droits à Laravel :
+apache
+Copier
+Modifier
+<Directory /var/www/html/public>
+    AllowOverride All
+</Directory>
+J’ai activé mod_rewrite avec :
 
 bash
-Copier le code
-chmod -R 775 storage bootstrap/cache
-🔴 3. Laravel non présent dans le conteneur (volume mal monté)
-❌ Problème
-Ton conteneur tournait, mais le projet Laravel n'était pas là (ou était vide).
+Copier
+Modifier
+a2enmod rewrite
+Et j’ai donné les bons droits à Laravel :
 
-✅ Solution
-Monter le bon dossier :
+bash
+Copier
+Modifier
+chmod -R 775 storage bootstrap/cache
+🔴 3. Le projet Laravel n’apparaissait pas dans le conteneur
+❌ Le problème :
+Mon conteneur tournait bien, mais le projet Laravel n’était pas là, ou vide. Le volume n’était pas monté correctement.
+
+✅ Ce que j’ai fait :
+J’ai vérifié que le montage était bien fait dans mon docker-compose.yml :
 
 yaml
-Copier le code
+Copier
+Modifier
 volumes:
   - .:/var/www/html
-Et t’assurer que le dossier courant (.) contient bien Laravel (artisan, app/, public/, etc.).
+Et je me suis assuré que le dossier courant (.) contenait bien tout Laravel : artisan, app/, routes/, public/, etc.
 
-🔴 4. Message d’avertissement Apache ServerName
-❌ Problème
+🔴 4. Avertissement Apache : ServerName
+❌ Le message :
 vbnet
-Copier le code
+Copier
+Modifier
 AH00558: Could not reliably determine the server's fully qualified domain name
-✅ Solution
-Ajouter dans ton Dockerfile :
+✅ Solution :
+J’ai simplement ajouté dans mon Dockerfile :
 
 dockerfile
-Copier le code
+Copier
+Modifier
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
-🔧 BONUS : ce qu’on a mis en place
-📦 Dockerfile complet
-PHP 8.3 + Apache
-
+🔧 Configuration mise en place
+📦 Dockerfile (PHP 8.3 + Apache) :
 pdo_mysql installé
 
 mod_rewrite activé
 
-DocumentRoot corrigé vers /public
-
-Droits Apache
+DocumentRoot vers /public
 
 ServerName défini
 
-Composer installé depuis une image officielle
+composer installé depuis l’image officielle PHP
 
-🐳 docker-compose.yml
-Deux services : laravel-app + mysql
+🐳 docker-compose.yml :
+2 services : laravel-app (Apache/PHP) + mysql
 
-Dossier Laravel monté dans /var/www/html
+Volume monté : Laravel local → /var/www/html
 
-Port 8080 mappé vers Apache
+Port mappé : 8080:80
 
-Réseau privé laravel
+Réseau privé : laravel
 
 ✅ Résultat final
-Tu peux maintenant :
+Je peux accéder à mon application Laravel sur : http://localhost:8080
 
-Accéder à Laravel via : http://localhost:8080
+J’exécute les commandes Artisan directement dans le conteneur
 
-Exécuter des commandes Artisan dans le conteneur
-
-Travailler avec une base de données MySQL sur localhost:3307
+Ma base MySQL est disponible sur localhost:3307
