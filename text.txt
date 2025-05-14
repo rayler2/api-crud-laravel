@@ -1,0 +1,110 @@
+
+Apache + PHP (dans un conteneur)
+
+MySQL (dans un autre)
+
+Laravel monté depuis ton dossier local
+
+Mais ton application fonctionnait en local (XAMPP par ex.) et pas dans Docker.
+
+🔴 1. Erreur : no such service: build
+❌ Problème
+Tu avais tapé :
+
+bash
+Copier le code
+docker-compose up -d build
+Docker a cru que build était un service.
+
+✅ Solution
+Utiliser la bonne syntaxe :
+
+bash
+Copier le code
+docker-compose up --build -d
+🔴 2. Erreur 403 Forbidden – Apache
+❌ Problème
+Apache lançait :
+
+text
+Copier le code
+Forbidden
+You don't have permission to access this resource.
+💡 Causes possibles :
+Mauvais dossier racine (Apache servait /var/www/html au lieu de /public)
+
+Droits Linux incorrects sur les fichiers
+
+mod_rewrite pas activé
+
+.htaccess ignoré
+
+✅ Solutions :
+Modifier DocumentRoot → /var/www/html/public
+
+Ajouter un bloc <Directory> dans Apache avec AllowOverride All
+
+Activer mod_rewrite
+
+Donner les bons droits à Laravel :
+
+bash
+Copier le code
+chmod -R 775 storage bootstrap/cache
+🔴 3. Laravel non présent dans le conteneur (volume mal monté)
+❌ Problème
+Ton conteneur tournait, mais le projet Laravel n'était pas là (ou était vide).
+
+✅ Solution
+Monter le bon dossier :
+
+yaml
+Copier le code
+volumes:
+  - .:/var/www/html
+Et t’assurer que le dossier courant (.) contient bien Laravel (artisan, app/, public/, etc.).
+
+🔴 4. Message d’avertissement Apache ServerName
+❌ Problème
+vbnet
+Copier le code
+AH00558: Could not reliably determine the server's fully qualified domain name
+✅ Solution
+Ajouter dans ton Dockerfile :
+
+dockerfile
+Copier le code
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+🔧 BONUS : ce qu’on a mis en place
+📦 Dockerfile complet
+PHP 8.3 + Apache
+
+pdo_mysql installé
+
+mod_rewrite activé
+
+DocumentRoot corrigé vers /public
+
+Droits Apache
+
+ServerName défini
+
+Composer installé depuis une image officielle
+
+🐳 docker-compose.yml
+Deux services : laravel-app + mysql
+
+Dossier Laravel monté dans /var/www/html
+
+Port 8080 mappé vers Apache
+
+Réseau privé laravel
+
+✅ Résultat final
+Tu peux maintenant :
+
+Accéder à Laravel via : http://localhost:8080
+
+Exécuter des commandes Artisan dans le conteneur
+
+Travailler avec une base de données MySQL sur localhost:3307
